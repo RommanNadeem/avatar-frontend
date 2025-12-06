@@ -67,21 +67,58 @@ export async function POST(request: NextRequest) {
       LIVEKIT_API_SECRET
     );
 
+    // Check if dispatch already exists
     const dispatches = await agentDispatchClient.listDispatch(roomName);
-    if (dispatches.length === 0) {
-      return NextResponse.json(
-        { error: "No dispatches found for the room" },
-        { status: 404 }
-      );
+    const existingDispatch = dispatches.find(
+      (dispatch) => dispatch.agentName === requestedAgentName
+    );
+
+    if (existingDispatch) {
+      console.log("Dispatch already exists:", existingDispatch.id);
+      // Check if the agent is actually connected by verifying jobs
+      try {
+        const dispatchDetails = await agentDispatchClient.getDispatch(
+          existingDispatch.id,
+          roomName
+        );
+        const jobs = dispatchDetails?.state?.jobs || [];
+        console.log("Existing dispatch jobs:", jobs.length);
+        
+        if (jobs.length > 0) {
+          return NextResponse.json({ 
+            success: true, 
+            message: "Agent dispatch already exists and has active jobs",
+            dispatchId: existingDispatch.id 
+          });
+        }
+      } catch (error) {
+        console.error("Error checking dispatch details:", error);
+        // Continue to create new dispatch if check fails
+      }
     }
 
-    const dispatchId = dispatches.find(
-      (dispatch) => dispatch.agentName === requestedAgentName
-    )?.id;
-
-    if (dispatchId) {
-      console.log("dispatchId already exists!", dispatchId);
-      return NextResponse.json({ success: true });
+    // Create new dispatch if none exists or if existing one has no jobs
+    try {
+      const newDispatch = await agentDispatchClient.createDispatch(roomName, requestedAgentName, {
+        metadata: "my_job_metadata",
+      });
+      console.log("Created new dispatch:", newDispatch);
+      return NextResponse.json({ 
+        success: true, 
+        message: "Agent dispatch created successfully",
+        dispatchId: newDispatch.id 
+      });
+    } catch (error) {
+      console.error("Error creating dispatch:", error);
+      // If dispatch already exists error, that's okay
+      if (error instanceof Error && error.message.includes("already exists")) {
+        return NextResponse.json({ 
+          success: true, 
+          message: "Agent dispatch already exists" 
+        });
+      }
+      throw error;
+    }
 
       //   return NextResponse.json(
       //     { error: "Agent dispatch already exists for the room" },
