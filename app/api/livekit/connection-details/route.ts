@@ -29,8 +29,25 @@ export async function GET(request: NextRequest) {
     // Parse query parameters
     const roomName = request.nextUrl.searchParams.get("roomName");
     const participantName = request.nextUrl.searchParams.get("participantName");
-    const metadata = request.nextUrl.searchParams.get("metadata") ?? "";
     const region = request.nextUrl.searchParams.get("region");
+    
+    // Get persona metadata from query params (if provided)
+    const avatarId = request.nextUrl.searchParams.get("avatarId");
+    const personaName = request.nextUrl.searchParams.get("personaName");
+    
+    // Build metadata string - prioritize persona metadata, fallback to existing metadata param
+    let metadata = "";
+    if (avatarId && personaName) {
+      metadata = JSON.stringify({
+        avatarId: avatarId,
+        personaName: personaName,
+      });
+      console.log(`📋 Including persona metadata in token: ${metadata}`);
+    } else {
+      // Use existing metadata param if no persona provided
+      metadata = request.nextUrl.searchParams.get("metadata") ?? "";
+    }
+    
     const livekitServerUrl = region ? getLiveKitURL(region) : LIVEKIT_URL;
     let randomParticipantPostfix = request.cookies.get(COOKIE_KEY)?.value;
 

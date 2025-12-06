@@ -81,21 +81,48 @@ export function PreJoin({
   const [username, setUsername] = React.useState(initialUserChoices.username);
 
   // Save user choices to persistent storage.
+  // Using refs to track previous values to avoid infinite loops
+  const prevAudioEnabled = React.useRef(audioEnabled);
+  const prevVideoEnabled = React.useRef(videoEnabled);
+  const prevAudioDeviceId = React.useRef(audioDeviceId);
+  const prevVideoDeviceId = React.useRef(videoDeviceId);
+  const prevUsername = React.useRef(username);
+
   React.useEffect(() => {
-    saveAudioInputEnabled(audioEnabled);
-  }, [audioEnabled, saveAudioInputEnabled]);
+    if (prevAudioEnabled.current !== audioEnabled) {
+      saveAudioInputEnabled(audioEnabled);
+      prevAudioEnabled.current = audioEnabled;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioEnabled]);
   React.useEffect(() => {
-    saveVideoInputEnabled(videoEnabled);
-  }, [videoEnabled, saveVideoInputEnabled]);
+    if (prevVideoEnabled.current !== videoEnabled) {
+      saveVideoInputEnabled(videoEnabled);
+      prevVideoEnabled.current = videoEnabled;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoEnabled]);
   React.useEffect(() => {
-    saveAudioInputDeviceId(audioDeviceId);
-  }, [audioDeviceId, saveAudioInputDeviceId]);
+    if (prevAudioDeviceId.current !== audioDeviceId) {
+      saveAudioInputDeviceId(audioDeviceId);
+      prevAudioDeviceId.current = audioDeviceId;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [audioDeviceId]);
   React.useEffect(() => {
-    saveVideoInputDeviceId(videoDeviceId);
-  }, [videoDeviceId, saveVideoInputDeviceId]);
+    if (prevVideoDeviceId.current !== videoDeviceId) {
+      saveVideoInputDeviceId(videoDeviceId);
+      prevVideoDeviceId.current = videoDeviceId;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoDeviceId]);
   React.useEffect(() => {
-    saveUsername(username);
-  }, [username, saveUsername]);
+    if (prevUsername.current !== username) {
+      saveUsername(username);
+      prevUsername.current = username;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username]);
 
   // Check if mediaDevices API is available
   const mediaDevicesAvailable = React.useMemo(() => {
@@ -116,11 +143,11 @@ export function PreJoin({
   const tracks = usePreviewTracks(
     {
       audio: audioEnabled && mediaDevicesAvailable
-        ? { deviceId: initialUserChoices.audioDeviceId }
+        ? { deviceId: audioDeviceId }
         : false,
       video: videoEnabled && mediaDevicesAvailable
         ? {
-            deviceId: initialUserChoices.videoDeviceId,
+            deviceId: videoDeviceId,
             processor: videoProcessor,
           }
         : false,

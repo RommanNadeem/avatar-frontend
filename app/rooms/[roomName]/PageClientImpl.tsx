@@ -25,7 +25,9 @@ import { useRouter } from "next/navigation";
 import React from "react";
 import { RoomContext } from "./RoomContext";
 import { VideoConference } from "./VideoConference";
-import { PreJoin } from "./PreJoin";
+import { PersonaSelection, Persona } from "./PersonaSelection";
+import { PersonaContext } from "./PersonaContext";
+// PreJoin removed - auto-join enabled
 
 const CONN_DETAILS_ENDPOINT =
   process.env.NEXT_PUBLIC_CONN_DETAILS_ENDPOINT ??
@@ -38,109 +40,124 @@ export function PageClientImpl(props: {
   hq: boolean;
   codec: VideoCodec;
 }) {
-  const [preJoinChoices, setPreJoinChoices] = React.useState<
-    LocalUserChoices | undefined
-  >(undefined);
-  const preJoinDefaults = React.useMemo(() => {
-    return {
-      username: "",
-      videoEnabled: false,
-      audioEnabled: true,
-    };
-  }, []);
+  // Auto-join: Generate username and default settings
+  const [userChoices] = React.useState<LocalUserChoices>(() => ({
+    username: `User-${Math.random().toString(36).substring(2, 9)}`,
+    videoEnabled: true,
+    audioEnabled: true,
+    videoDeviceId: undefined,
+    audioDeviceId: undefined,
+  }));
+
   const [connectionDetails, setConnectionDetails] = React.useState<
     ConnectionDetails | undefined
   >(undefined);
+  const [isConnecting, setIsConnecting] = React.useState(false);
+  const [selectedPersona, setSelectedPersona] = React.useState<Persona | null>(null);
+  const [showPersonaSelection, setShowPersonaSelection] = React.useState(true);
 
-  const handlePreJoinSubmit = React.useCallback(
-    async (values: LocalUserChoices) => {
-      setPreJoinChoices(values);
-      const url = new URL(CONN_DETAILS_ENDPOINT, window.location.origin);
-      url.searchParams.append("roomName", props.roomName);
-      url.searchParams.append("participantName", values.username);
-      if (props.region) {
-        url.searchParams.append("region", props.region);
-      }
-      try {
-        const connectionDetailsResp = await fetch(url.toString());
-        if (!connectionDetailsResp.ok) {
-          const errorText = await connectionDetailsResp.text();
-          throw new Error(errorText || `Failed to get connection details: ${connectionDetailsResp.status}`);
+  // Handle persona selection
+  const handlePersonaSelect = React.useCallback((persona: Persona) => {
+    setSelectedPersona(persona);
+    setShowPersonaSelection(false);
+    // Start connecting after persona is selected
+    setIsConnecting(true);
+  }, []);
+
+  const handleSkipPersona = React.useCallback(() => {
+    setShowPersonaSelection(false);
+    setIsConnecting(true);
+  }, []);
+
+  // Connect to room after persona selection (or skip)
+  React.useEffect(() => {
+    if (!showPersonaSelection && isConnecting && !connectionDetails) {
+      const connect = async () => {
+        try {
+          const url = new URL(CONN_DETAILS_ENDPOINT, window.location.origin);
+          url.searchParams.append("roomName", props.roomName);
+          url.searchParams.append("participantName", userChoices.username);
+          
+          // Add persona metadata to the token request
+          if (selectedPersona) {
+            url.searchParams.append("avatarId", selectedPersona.id);
+            url.searchParams.append("personaName", selectedPersona.name);
+            console.log("📋 Sending persona to token API:", selectedPersona.name, selectedPersona.id);
+          }
+          
+          if (props.region) {
+            url.searchParams.append("region", props.region);
+          }
+
+          const response = await fetch(url.toString());
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || `Failed to connect: ${response.status}`);
+          }
+
+          const data = await response.json();
+          setConnectionDetails(data);
+          setIsConnecting(false);
+          console.log("✅ Auto-joined room:", props.roomName);
+          if (selectedPersona) {
+            console.log("✅ Selected persona:", selectedPersona.name, selectedPersona.id);
+          }
+        } catch (error) {
+          console.error("Connection error:", error);
+          alert(
+            error instanceof Error 
+              ? error.message 
+              : "Failed to connect. Check your LiveKit configuration."
+          );
+          setIsConnecting(false);
         }
-        const connectionDetailsData = await connectionDetailsResp.json();
-        setConnectionDetails(connectionDetailsData);
-      } catch (error) {
-        console.error("Error getting connection details:", error);
-        alert(
-          error instanceof Error 
-            ? error.message 
-            : "Failed to connect. Please check your LiveKit configuration."
-        );
-        setPreJoinChoices(undefined);
-      }
-    },
-    [props.roomName, props.region]
-  );
+      };
 
-  const handlePreJoinError = React.useCallback(
-    (e: Error | unknown) => {
-      console.error("Error in handlePreJoinError:", e);
-      
-      let errorMessage = "An error occurred while accessing your media devices.";
-      
-      if (e instanceof Error) {
-        if (e.message.includes("getUserMedia") || e.message.includes("mediaDevices")) {
-          errorMessage = "Unable to access camera/microphone. Please ensure:\n" +
-            "1. You're using a secure connection (HTTPS or localhost)\n" +
-            "2. Your browser supports media devices\n" +
-            "3. You've granted camera/microphone permissions";
-        } else if (e.name === "NotAllowedError" || e.message.includes("Permission denied")) {
-          errorMessage = "Camera/microphone access was denied. Please allow access in your browser settings and try again.";
-        } else if (e.name === "NotFoundError" || e.message.includes("not found")) {
-          errorMessage = "No camera or microphone found. Please connect a device and try again.";
-        } else {
-          errorMessage = e.message || errorMessage;
-        }
-      }
-      
-      alert(errorMessage);
-    },
-    []
-  );
+      connect();
+    }
+  }, [showPersonaSelection, isConnecting, connectionDetails, props.roomName, props.region, userChoices.username, selectedPersona]);
 
-  // const handleValidate = (options: LocalUserChoices): boolean => {
-  //   if (!options.videoEnabled) {
-  //     alert("Please enable your video before joining.");
-  //     return false;
-  //   }
-  //   return true;
-  // };
+  // Show persona selection screen
+  if (showPersonaSelection) {
+    return (
+      <main data-lk-theme="default" style={{ height: "100vh" }}>
+        <PersonaSelection
+          onSelect={handlePersonaSelect}
+          onSkip={handleSkipPersona}
+        />
+      </main>
+    );
+  }
 
+  // Show loading while connecting
+  if (isConnecting || !connectionDetails) {
+    return (
+      <main data-lk-theme="default" style={{ height: "100vh", display: "grid", placeItems: "center" }}>
+        <div style={{ textAlign: "center" }}>
+          <p>Connecting to room: {props.roomName}...</p>
+          {selectedPersona && (
+            <p style={{ marginTop: "0.5rem", color: "var(--lk-text-secondary, #999)" }}>
+              Using persona: {selectedPersona.name}
+            </p>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  // Show video conference directly
   return (
     <main data-lk-theme="default" style={{ height: "100vh" }}>
-      {connectionDetails === undefined || preJoinChoices === undefined ? (
-        <div style={{ display: "grid", placeItems: "center", height: "100%" }}>
-          <PreJoin
-            defaults={preJoinDefaults}
-            onSubmit={handlePreJoinSubmit}
-            onError={handlePreJoinError}
-            // onValidate={handleValidate}
-          />
-        </div>
-      ) : (
-        // <VideoConferenceComponent
-        //   connectionDetails={connectionDetails}
-        //   userChoices={preJoinChoices}
-        //   options={{ codec: props.codec, hq: props.hq }}
-        // />
-        <RoomContext.Provider value={props.roomName}>
+      <RoomContext.Provider value={props.roomName}>
+        <PersonaContext.Provider value={{ selectedPersona, setSelectedPersona }}>
           <VideoConferenceComponent
             connectionDetails={connectionDetails}
-            userChoices={preJoinChoices}
+            userChoices={userChoices}
             options={{ codec: props.codec, hq: props.hq }}
+            selectedPersona={selectedPersona}
           />
-        </RoomContext.Provider>
-      )}
+        </PersonaContext.Provider>
+      </RoomContext.Provider>
     </main>
   );
 }
@@ -152,6 +169,7 @@ function VideoConferenceComponent(props: {
     hq: boolean;
     codec: VideoCodec;
   };
+  selectedPersona: Persona | null;
 }) {
   const e2eePassphrase =
     typeof window !== "undefined" &&
@@ -224,6 +242,7 @@ function VideoConferenceComponent(props: {
   }, [e2eeEnabled, room, e2eePassphrase]);
 
   const connectOptions = React.useMemo((): RoomConnectOptions => {
+    // Metadata is now included in the access token, not in connectOptions
     return {
       autoSubscribe: true,
     };

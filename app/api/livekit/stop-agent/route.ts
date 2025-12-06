@@ -16,10 +16,22 @@ function isValidUrl(url: string | undefined): boolean {
   }
 }
 
+// Convert wss:// to https:// for API calls
+function convertToHttpUrl(url: string): string {
+  if (url.startsWith("wss://")) {
+    return url.replace("wss://", "https://");
+  }
+  if (url.startsWith("ws://")) {
+    return url.replace("ws://", "http://");
+  }
+  return url;
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const roomName = request.nextUrl.searchParams.get("room-name");
-    const agentName = process.env.NEXT_PUBLIC_AGENT_NAME || "livekit-agent";
+    const agentNameParam = request.nextUrl.searchParams.get("agent-name");
+    const agentName = agentNameParam || process.env.NEXT_PUBLIC_AGENT_NAME || "livekit-agent";
 
     console.log("stopping agent...");
     console.log("roomName:", roomName);
@@ -90,8 +102,11 @@ export async function DELETE(request: NextRequest) {
     //   );
     // }
 
+    // Convert wss:// to https:// for API client
+    const httpUrl = convertToHttpUrl(LIVEKIT_URL);
+    
     const agentDispatchClient = new AgentDispatchClient(
-      LIVEKIT_URL,
+      httpUrl,
       LIVEKIT_API_KEY,
       LIVEKIT_API_SECRET
     );

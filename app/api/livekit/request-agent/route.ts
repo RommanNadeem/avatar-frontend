@@ -16,10 +16,21 @@ function isValidUrl(url: string | undefined): boolean {
   }
 }
 
+// Convert wss:// to https:// for API calls (AgentDispatchClient needs HTTP)
+function convertToHttpUrl(url: string): string {
+  if (url.startsWith("wss://")) {
+    return url.replace("wss://", "https://");
+  }
+  if (url.startsWith("ws://")) {
+    return url.replace("ws://", "http://");
+  }
+  return url;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { room, agentName } = body;
+    const { room, agentName, avatarId, personaName } = body;  // Add avatarId and personaName
 
     if (!room) {
       return NextResponse.json(
@@ -58,65 +69,97 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const roomName = room;
-    const requestedAgentName = agentName || process.env.NEXT_PUBLIC_AGENT_NAME || "livekit-agent";
+    // Simple: Just create dispatch for the requested agent
+    const requestedAgentName = agentName || "anam-avatar-agent";
+    
+    // Convert wss:// to https:// for API client
+    const httpUrl = convertToHttpUrl(LIVEKIT_URL);
+    
+    console.log(`Requesting agent: ${requestedAgentName} for room: ${room}`);
+    console.log(`LiveKit URL (original): ${LIVEKIT_URL}`);
+    console.log(`LiveKit URL (converted): ${httpUrl}`);
+    console.log(`API Key: ${LIVEKIT_API_KEY?.substring(0, 10)}...`);
 
     const agentDispatchClient = new AgentDispatchClient(
-      LIVEKIT_URL,
+      httpUrl,
       LIVEKIT_API_KEY,
       LIVEKIT_API_SECRET
     );
 
-    // Check if dispatch already exists
-    const dispatches = await agentDispatchClient.listDispatch(roomName);
-    const existingDispatch = dispatches.find(
-      (dispatch) => dispatch.agentName === requestedAgentName
-    );
-
-    if (existingDispatch) {
-      console.log("Dispatch already exists:", existingDispatch.id);
-      // Check if the agent is actually connected by verifying jobs
-      try {
-        const dispatchDetails = await agentDispatchClient.getDispatch(
-          existingDispatch.id,
-          roomName
-        );
-        const jobs = dispatchDetails?.state?.jobs || [];
-        console.log("Existing dispatch jobs:", jobs.length);
-        
-        if (jobs.length > 0) {
-          return NextResponse.json({ 
-            success: true, 
-            message: "Agent dispatch already exists and has active jobs",
-            dispatchId: existingDispatch.id 
-          });
-        }
-      } catch (error) {
-        console.error("Error checking dispatch details:", error);
-        // Continue to create new dispatch if check fails
-      }
-    }
-
-    // Create new dispatch if none exists or if existing one has no jobs
     try {
-      const newDispatch = await agentDispatchClient.createDispatch(roomName, requestedAgentName, {
-        metadata: "my_job_metadata",
+      console.log(`Connecting to LiveKit: ${LIVEKIT_URL}`);
+      console.log(`Creating dispatch for room: ${room}, agent: ${requestedAgentName}`);
+      
+      // Create dispatch with persona metadata (if provided)
+      const dispatchMetadata = avatarId && personaName
+        ? JSON.stringify({
+            type: "anam_avatar",
+            avatarId: avatarId,
+            personaName: personaName,
+          })
+        : JSON.stringify({
+            type: "anam_avatar"
+          });
+      
+      if (avatarId && personaName) {
+        console.log(`📋 Including persona in dispatch metadata: ${personaName} (${avatarId})`);
+      }
+      
+      const dispatch = await agentDispatchClient.createDispatch(room, requestedAgentName, {
+        metadata: dispatchMetadata,  // Include persona info in dispatch metadata
       });
-      console.log("Created new dispatch:", newDispatch);
+      
+      console.log(`✅ Dispatch created: ${dispatch.id}`);
+      if (avatarId) {
+        console.log(`✅ Dispatch metadata: ${dispatchMetadata}`);
+      }
+      
       return NextResponse.json({ 
         success: true, 
-        message: "Agent dispatch created successfully",
-        dispatchId: newDispatch.id 
+        message: "ANAM avatar requested",
+        dispatchId: dispatch.id,
+        agentName: requestedAgentName,
+        avatarId: avatarId || null,
+        personaName: personaName || null,
+        room,
       });
     } catch (error) {
       console.error("Error creating dispatch:", error);
-      // If dispatch already exists error, that's okay
+      
+      // Connection timeout
+      if (error instanceof Error && (
+        error.message.includes("timeout") || 
+        error.message.includes("Connect Timeout") ||
+        error.message.includes("UND_ERR_CONNECT_TIMEOUT")
+      )) {
+        return NextResponse.json(
+          { 
+            error: `Connection timeout to LiveKit server. Check:\n1. LIVEKIT_URL is correct: ${LIVEKIT_URL}\n2. Network connectivity\n3. Firewall/proxy settings`,
+            livekitUrl: LIVEKIT_URL,
+          },
+          { status: 504 }
+        );
+      }
+      
+      // If already exists, that's fine
       if (error instanceof Error && error.message.includes("already exists")) {
         return NextResponse.json({ 
           success: true, 
-          message: "Agent dispatch already exists" 
+          message: "Agent already requested",
+          agentName: requestedAgentName,
         });
       }
+      
+      // Room doesn't exist
+      if (error instanceof Error && error.message.includes("room does not exist")) {
+        return NextResponse.json(
+          { 
+            error: `Room "${room}" does not exist. Make sure you're connected to the room first.`,
+          },
+          { status: 404 }
+        );
+      }
+      
       throw error;
     }
   } catch (error) {
