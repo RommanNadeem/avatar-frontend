@@ -1,23 +1,32 @@
-import * as React from 'react';
-import { useRoomContext } from '@livekit/components-react';
-import { setLogLevel, LogLevel, RemoteTrackPublication, setLogExtension } from 'livekit-client';
-// @ts-expect-error - tinykeys doesn't have TypeScript definitions
-import { tinykeys } from 'tinykeys';
-import { datadogLogs } from '@datadog/browser-logs';
+import * as React from "react";
+import { useRoomContext } from "@livekit/components-react";
+import {
+  setLogLevel,
+  LogLevel,
+  RemoteTrackPublication,
+  setLogExtension,
+} from "livekit-client";
+// @ts-ignore
+import { tinykeys } from "tinykeys";
+import { datadogLogs } from "@datadog/browser-logs";
+import type { Site } from "@datadog/browser-core/esm/domain/configuration/intakeSites";
 
-import styles from '../styles/Debug.module.css';
+import styles from "../styles/Debug.module.css";
 
 export const useDebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
   const room = useRoomContext();
 
   React.useEffect(() => {
-    setLogLevel(logLevel ?? 'debug');
+    setLogLevel(logLevel ?? "debug");
 
-    if (process.env.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN && process.env.NEXT_PUBLIC_DATADOG_SITE) {
-      console.log('setting up datadog logs');
+    if (
+      process.env.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN &&
+      process.env.NEXT_PUBLIC_DATADOG_SITE
+    ) {
+      console.log("setting up datadog logs");
       datadogLogs.init({
         clientToken: process.env.NEXT_PUBLIC_DATADOG_CLIENT_TOKEN,
-        site: process.env.NEXT_PUBLIC_DATADOG_SITE,
+        site: process.env.NEXT_PUBLIC_DATADOG_SITE as Site,
         forwardErrorsToLogs: true,
         sessionSampleRate: 100,
       });
@@ -56,7 +65,7 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
   const room = useRoomContext();
   const [isOpen, setIsOpen] = React.useState(false);
   const [, setRender] = React.useState({});
-  const [roomSid, setRoomSid] = React.useState('');
+  const [roomSid, setRoomSid] = React.useState("");
 
   React.useEffect(() => {
     room.getSid().then(setRoomSid);
@@ -67,8 +76,8 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
   React.useEffect(() => {
     if (window) {
       const unsubscribe = tinykeys(window, {
-        'Shift+D': () => {
-          console.log('setting open');
+        "Shift+D": () => {
+          console.log("setting open");
           setIsOpen((open) => !open);
         },
       });
@@ -85,9 +94,27 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
     }
   }, [isOpen]);
 
-  if (typeof window === 'undefined' || !isOpen) {
+  if (typeof window === "undefined" || !isOpen) {
     return null;
   }
+
+  const handleSimulate = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const { value } = event.target;
+    if (value == "") {
+      return;
+    }
+    event.target.value = "";
+    let isReconnect = false;
+    switch (value) {
+      case "signal-reconnect":
+        isReconnect = true;
+
+      // fall through
+      default:
+        // @ts-expect-error
+        room.simulateScenario(value);
+    }
+  };
 
   const lp = room.localParticipant;
 
@@ -124,16 +151,19 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
                         <td>Kind</td>
                         <td>
                           {t.kind}&nbsp;
-                          {t.kind === 'video' && (
+                          {t.kind === "video" && (
                             <span>
-                              {t.track?.dimensions?.width}x{t.track?.dimensions?.height}
+                              {t.track?.dimensions?.width}x
+                              {t.track?.dimensions?.height}
                             </span>
                           )}
                         </td>
                       </tr>
                       <tr>
                         <td>Bitrate</td>
-                        <td>{Math.ceil(t.track!.currentBitrate / 1000)} kbps</td>
+                        <td>
+                          {Math.ceil(t.track!.currentBitrate / 1000)} kbps
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -153,10 +183,10 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
                       <>
                         <tr>
                           <td>{key}</td>
-                          {key !== 'canPublishSources' ? (
+                          {key !== "canPublishSources" ? (
                             <td>{val.toString()}</td>
                           ) : (
-                            <td> {val.join(', ')} </td>
+                            <td> {val.join(", ")} </td>
                           )}
                         </tr>
                       </>
@@ -194,7 +224,7 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
                           <td>Kind</td>
                           <td>
                             {t.kind}&nbsp;
-                            {t.kind === 'video' && (
+                            {t.kind === "video" && (
                               <span>
                                 {t.dimensions?.width}x{t.dimensions?.height}
                               </span>
@@ -208,7 +238,9 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
                         {t.track && (
                           <tr>
                             <td>Bitrate</td>
-                            <td>{Math.ceil(t.track.currentBitrate / 1000)} kbps</td>
+                            <td>
+                              {Math.ceil(t.track.currentBitrate / 1000)} kbps
+                            </td>
                           </tr>
                         )}
                       </tbody>
@@ -226,8 +258,8 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
 
 function trackStatus(t: RemoteTrackPublication): string {
   if (t.isSubscribed) {
-    return t.isEnabled ? 'enabled' : 'disabled';
+    return t.isEnabled ? "enabled" : "disabled";
   } else {
-    return 'unsubscribed';
+    return "unsubscribed";
   }
 }

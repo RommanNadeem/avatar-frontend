@@ -33,14 +33,14 @@ export async function GET(request: NextRequest) {
     const region = request.nextUrl.searchParams.get("region");
     const livekitServerUrl = region ? getLiveKitURL(region) : LIVEKIT_URL;
     let randomParticipantPostfix = request.cookies.get(COOKIE_KEY)?.value;
-    
+
     if (livekitServerUrl === undefined) {
       return new NextResponse(
         "LiveKit URL is not configured. Please set LIVEKIT_URL in your environment variables.",
         { status: 500 }
       );
     }
-    
+
     if (!isValidUrl(livekitServerUrl)) {
       return new NextResponse(
         `Invalid LiveKit URL configuration. Please set a valid LIVEKIT_URL in your environment variables. Current value appears to be a placeholder.`,
@@ -55,7 +55,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!API_SECRET || API_SECRET.includes("<") || API_SECRET.includes("your-")) {
+    if (
+      !API_SECRET ||
+      API_SECRET.includes("<") ||
+      API_SECRET.includes("your-")
+    ) {
       return new NextResponse(
         "LiveKit API secret is not configured. Please set LIVEKIT_API_SECRET in your environment variables.",
         { status: 500 }
@@ -78,7 +82,7 @@ export async function GET(request: NextRequest) {
     if (!randomParticipantPostfix) {
       randomParticipantPostfix = randomString(4);
     }
-    
+
     let participantToken: string;
     try {
       participantToken = await createParticipantToken(
@@ -92,7 +96,9 @@ export async function GET(request: NextRequest) {
     } catch (tokenError) {
       console.error("Error creating participant token:", tokenError);
       return new NextResponse(
-        `Failed to create access token. Please verify that your LIVEKIT_API_KEY and LIVEKIT_API_SECRET are correct and match your LiveKit server. Error: ${tokenError instanceof Error ? tokenError.message : "Unknown error"}`,
+        `Failed to create access token. Please verify that your LIVEKIT_API_KEY and LIVEKIT_API_SECRET are correct and match your LiveKit server. Error: ${
+          tokenError instanceof Error ? tokenError.message : "Unknown error"
+        }`,
         { status: 500 }
       );
     }
@@ -118,14 +124,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function createParticipantToken(
+async function createParticipantToken(
   userInfo: AccessTokenOptions,
   roomName: string
-): string {
+): Promise<string> {
   if (!API_KEY || !API_SECRET) {
     throw new Error("API_KEY or API_SECRET is missing");
   }
-  
+
   try {
     const at = new AccessToken(API_KEY, API_SECRET, userInfo);
     at.ttl = "5m";
@@ -137,10 +143,12 @@ function createParticipantToken(
       canSubscribe: true,
     };
     at.addGrant(grant);
-    return at.toJwt();
+    return await at.toJwt();
   } catch (error) {
     throw new Error(
-      `Failed to generate access token: ${error instanceof Error ? error.message : "Unknown error"}. Please verify your API credentials are correct.`
+      `Failed to generate access token: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }. Please verify your API credentials are correct.`
     );
   }
 }

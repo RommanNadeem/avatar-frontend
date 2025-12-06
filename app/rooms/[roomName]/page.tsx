@@ -2,18 +2,7 @@ import * as React from "react";
 import { PageClientImpl } from "./PageClientImpl";
 import { isVideoCodec } from "@/lib/types";
 
-export default async function Page({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ roomName: string }>;
-  searchParams: Promise<{
-    // FIXME: We should not allow values for regions if in playground mode.
-    region?: string;
-    hq?: string;
-    codec?: string;
-  }>;
-}) {
+export default async function Page({ params, searchParams }: any) {
   const { roomName } = await params;
   const { region, hq, codec } = await searchParams;
 
