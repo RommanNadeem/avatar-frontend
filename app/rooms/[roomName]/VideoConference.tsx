@@ -13,7 +13,6 @@ import {
 import type { MessageFormatter } from "@livekit/components-react";
 import {
   CarouselLayout,
-  Chat,
   ConnectionStateToast,
   FocusLayout,
   FocusLayoutContainer,
@@ -72,8 +71,9 @@ export function VideoConference({
   // Filter out placeholders - only pass actual track references to layouts
   const actualTracks = tracks.filter(isTrackReference);
 
-  const screenShareTracks = actualTracks
-    .filter((track) => track.publication.source === Track.Source.ScreenShare);
+  const screenShareTracks = actualTracks.filter(
+    (track) => track.publication.source === Track.Source.ScreenShare
+  );
 
   const focusTrack = usePinnedTracks(layoutContext)?.[0];
   const carouselTracks = actualTracks.filter(
@@ -158,15 +158,9 @@ export function VideoConference({
               </div>
             )}
             <ControlBar
-              controls={{ chat: true, settings: !!SettingsComponent }}
+              controls={{ chat: false, settings: !!SettingsComponent }}
             />
           </div>
-          <Chat
-            style={{ display: widgetState.showChat ? "grid" : "none" }}
-            messageFormatter={chatMessageFormatter}
-            // messageEncoder={chatMessageEncoder}
-            // messageDecoder={chatMessageDecoder}
-          />
           {SettingsComponent && (
             <div
               className="lk-settings-menu-modal"

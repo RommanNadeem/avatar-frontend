@@ -121,7 +121,7 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 mt-6 justify-items-start">
+          {/* <div className="flex flex-col gap-4 mt-6 justify-items-start">
             <div className="flex flex-row gap-4">
               <input
                 id="use-e2ee"
@@ -142,7 +142,7 @@ export default function Page() {
                 />
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       </section>
       <Dialog open={open} onOpenChange={(open) => setOpen(open)}>
