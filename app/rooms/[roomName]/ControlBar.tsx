@@ -225,14 +225,15 @@ export function ControlBar({
         <Bot className="max-w-5" />
         {showText && "Voice Agent"}
       </button>
-      <button
+      {/* ANAM Avatar button commented out - agent now auto-connects on room join */}
+      {/* <button
         className="lk-button"
         onClick={() => onRequestAgent("anam-avatar-agent")}
         disabled={agentCalling}
       >
         <Bot className="max-w-5" />
         {showText && "ANAM Avatar"}
-      </button>
+      </button> */}
       <button
         className="lk-button !text-red-600 !border !border-solid !border-red-600"
         onClick={onCloseAgent}

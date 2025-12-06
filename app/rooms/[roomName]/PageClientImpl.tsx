@@ -25,6 +25,7 @@ import {
 } from "livekit-client";
 import { useRouter } from "next/navigation";
 import React from "react";
+import { toast } from "sonner";
 import { RoomContext, useRoomName } from "./RoomContext";
 import { VideoConference } from "./VideoConference";
 import { PreJoin } from "./PreJoin";
@@ -246,6 +247,7 @@ function VideoConferenceComponent(props: {
   const router = useRouter();
   const roomName = useRoomName();
   const agentRequestedRef = React.useRef(false);
+  const [isRequestingAgent, setIsRequestingAgent] = React.useState(false);
 
   // Automatically connect to ANAM agent when room is connected
   React.useEffect(() => {
@@ -258,6 +260,12 @@ function VideoConferenceComponent(props: {
         return;
       }
       agentRequestedRef.current = true;
+      setIsRequestingAgent(true);
+
+      // Show feedback to user
+      toast.info("ANAM Avatar agent will be joining shortly...", {
+        duration: 5000,
+      });
 
       // Automatically request ANAM agent
       fetch("/api/livekit/request-agent", {
@@ -283,10 +291,21 @@ function VideoConferenceComponent(props: {
         })
         .then((responseData) => {
           console.log("ANAM agent automatically requested:", responseData);
+          toast.success("ANAM Avatar agent is connecting...", {
+            duration: 3000,
+          });
         })
         .catch((error) => {
           console.error("Error automatically requesting ANAM agent:", error);
-          // Don't show alert for automatic connection failures to avoid interrupting user
+          toast.error(
+            "Failed to connect ANAM Avatar agent. Please try again.",
+            {
+              duration: 4000,
+            }
+          );
+        })
+        .finally(() => {
+          setIsRequestingAgent(false);
         });
     };
 
