@@ -20,10 +20,12 @@ import {
   Room,
   DeviceUnsupportedError,
   RoomConnectOptions,
+  RoomEvent,
+  ConnectionState,
 } from "livekit-client";
 import { useRouter } from "next/navigation";
 import React from "react";
-import { RoomContext } from "./RoomContext";
+import { RoomContext, useRoomName } from "./RoomContext";
 import { VideoConference } from "./VideoConference";
 import { PreJoin } from "./PreJoin";
 
@@ -65,15 +67,18 @@ export function PageClientImpl(props: {
         const connectionDetailsResp = await fetch(url.toString());
         if (!connectionDetailsResp.ok) {
           const errorText = await connectionDetailsResp.text();
-          throw new Error(errorText || `Failed to get connection details: ${connectionDetailsResp.status}`);
+          throw new Error(
+            errorText ||
+              `Failed to get connection details: ${connectionDetailsResp.status}`
+          );
         }
         const connectionDetailsData = await connectionDetailsResp.json();
         setConnectionDetails(connectionDetailsData);
       } catch (error) {
         console.error("Error getting connection details:", error);
         alert(
-          error instanceof Error 
-            ? error.message 
+          error instanceof Error
+            ? error.message
             : "Failed to connect. Please check your LiveKit configuration."
         );
         setPreJoinChoices(undefined);
@@ -82,31 +87,40 @@ export function PageClientImpl(props: {
     [props.roomName, props.region]
   );
 
-  const handlePreJoinError = React.useCallback(
-    (e: Error | unknown) => {
-      console.error("Error in handlePreJoinError:", e);
-      
-      let errorMessage = "An error occurred while accessing your media devices.";
-      
-      if (e instanceof Error) {
-        if (e.message.includes("getUserMedia") || e.message.includes("mediaDevices")) {
-          errorMessage = "Unable to access camera/microphone. Please ensure:\n" +
-            "1. You're using a secure connection (HTTPS or localhost)\n" +
-            "2. Your browser supports media devices\n" +
-            "3. You've granted camera/microphone permissions";
-        } else if (e.name === "NotAllowedError" || e.message.includes("Permission denied")) {
-          errorMessage = "Camera/microphone access was denied. Please allow access in your browser settings and try again.";
-        } else if (e.name === "NotFoundError" || e.message.includes("not found")) {
-          errorMessage = "No camera or microphone found. Please connect a device and try again.";
-        } else {
-          errorMessage = e.message || errorMessage;
-        }
+  const handlePreJoinError = React.useCallback((e: Error | unknown) => {
+    console.error("Error in handlePreJoinError:", e);
+
+    let errorMessage = "An error occurred while accessing your media devices.";
+
+    if (e instanceof Error) {
+      if (
+        e.message.includes("getUserMedia") ||
+        e.message.includes("mediaDevices")
+      ) {
+        errorMessage =
+          "Unable to access camera/microphone. Please ensure:\n" +
+          "1. You're using a secure connection (HTTPS or localhost)\n" +
+          "2. Your browser supports media devices\n" +
+          "3. You've granted camera/microphone permissions";
+      } else if (
+        e.name === "NotAllowedError" ||
+        e.message.includes("Permission denied")
+      ) {
+        errorMessage =
+          "Camera/microphone access was denied. Please allow access in your browser settings and try again.";
+      } else if (
+        e.name === "NotFoundError" ||
+        e.message.includes("not found")
+      ) {
+        errorMessage =
+          "No camera or microphone found. Please connect a device and try again.";
+      } else {
+        errorMessage = e.message || errorMessage;
       }
-      
-      alert(errorMessage);
-    },
-    []
-  );
+    }
+
+    alert(errorMessage);
+  }, []);
 
   // const handleValidate = (options: LocalUserChoices): boolean => {
   //   if (!options.videoEnabled) {
@@ -230,6 +244,65 @@ function VideoConferenceComponent(props: {
   }, []);
 
   const router = useRouter();
+  const roomName = useRoomName();
+  const agentRequestedRef = React.useRef(false);
+
+  // Automatically connect to ANAM agent when room is connected
+  React.useEffect(() => {
+    if (!room || !roomName || agentRequestedRef.current) {
+      return;
+    }
+
+    const handleConnected = () => {
+      if (agentRequestedRef.current) {
+        return;
+      }
+      agentRequestedRef.current = true;
+
+      // Automatically request ANAM agent
+      fetch("/api/livekit/request-agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          room: roomName,
+          agentName: "anam-avatar-agent",
+        }),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            return response.json().then((errorData) => {
+              throw new Error(
+                errorData.error ||
+                  `Failed to request agent: ${response.status} ${response.statusText}`
+              );
+            });
+          }
+          return response.json();
+        })
+        .then((responseData) => {
+          console.log("ANAM agent automatically requested:", responseData);
+        })
+        .catch((error) => {
+          console.error("Error automatically requesting ANAM agent:", error);
+          // Don't show alert for automatic connection failures to avoid interrupting user
+        });
+    };
+
+    // Check if already connected
+    if (room.state === ConnectionState.Connected) {
+      handleConnected();
+    } else {
+      // Listen for connection event
+      room.on(RoomEvent.Connected, handleConnected);
+    }
+
+    return () => {
+      room.off(RoomEvent.Connected, handleConnected);
+    };
+  }, [room, roomName]);
+
   const handleOnLeave = React.useCallback(() => router.push("/"), [router]);
   const handleError = React.useCallback((error: Error) => {
     console.error(error);
