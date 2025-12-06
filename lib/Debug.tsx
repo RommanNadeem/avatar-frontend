@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useRoomContext } from '@livekit/components-react';
 import { setLogLevel, LogLevel, RemoteTrackPublication, setLogExtension } from 'livekit-client';
-// @ts-ignore
+// @ts-expect-error - tinykeys doesn't have TypeScript definitions
 import { tinykeys } from 'tinykeys';
 import { datadogLogs } from '@datadog/browser-logs';
 
@@ -42,11 +42,11 @@ export const useDebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
       });
     }
 
-    // @ts-expect-error
+    // @ts-expect-error - Adding room to window for debugging purposes
     window.__lk_room = room;
 
     return () => {
-      // @ts-expect-error
+      // @ts-expect-error - Removing room from window on cleanup
       window.__lk_room = undefined;
     };
   }, [room, logLevel]);
@@ -88,24 +88,6 @@ export const DebugMode = ({ logLevel }: { logLevel?: LogLevel }) => {
   if (typeof window === 'undefined' || !isOpen) {
     return null;
   }
-
-  const handleSimulate = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const { value } = event.target;
-    if (value == '') {
-      return;
-    }
-    event.target.value = '';
-    let isReconnect = false;
-    switch (value) {
-      case 'signal-reconnect':
-        isReconnect = true;
-
-      // fall through
-      default:
-        // @ts-expect-error
-        room.simulateScenario(value);
-    }
-  };
 
   const lp = room.localParticipant;
 

@@ -100,11 +100,16 @@ export function PreJoin({
   // Check if mediaDevices API is available
   const mediaDevicesAvailable = React.useMemo(() => {
     if (typeof window === "undefined") return false;
+    const nav = navigator as Navigator & {
+      getUserMedia?: typeof navigator.mediaDevices.getUserMedia;
+      webkitGetUserMedia?: typeof navigator.mediaDevices.getUserMedia;
+      mozGetUserMedia?: typeof navigator.mediaDevices.getUserMedia;
+    };
     return !!(
       navigator?.mediaDevices?.getUserMedia ||
-      (navigator as any)?.getUserMedia ||
-      (navigator as any)?.webkitGetUserMedia ||
-      (navigator as any)?.mozGetUserMedia
+      nav?.getUserMedia ||
+      nav?.webkitGetUserMedia ||
+      nav?.mozGetUserMedia
     );
   }, []);
 
