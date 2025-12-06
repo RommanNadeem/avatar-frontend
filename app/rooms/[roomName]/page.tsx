@@ -6,13 +6,13 @@ export default async function Page({
   params,
   searchParams,
 }: {
-  params: { roomName: string };
-  searchParams: {
+  params: Promise<{ roomName: string }>;
+  searchParams: Promise<{
     // FIXME: We should not allow values for regions if in playground mode.
     region?: string;
     hq?: string;
     codec?: string;
-  };
+  }>;
 }) {
   const { roomName } = await params;
   const { region, hq, codec } = await searchParams;
