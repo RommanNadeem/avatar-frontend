@@ -132,7 +132,7 @@ export function VideoConference({
         track.publication.isSubscribed &&
         track.publication.track &&
         !track.publication.isMuted &&
-        track.publication.track.isEnabled
+        track.publication.isEnabled
       );
     }
     
@@ -162,6 +162,17 @@ export function VideoConference({
       }
     }
   }, [agentTracks, focusTrack, layoutContext]);
+
+  // Extract complex expression for dependency array
+  const screenShareTracksKey = React.useMemo(
+    () =>
+      screenShareTracks
+        .map(
+          (ref) => `${ref.publication.trackSid}_${ref.publication.isSubscribed}`
+        )
+        .join(),
+    [screenShareTracks]
+  );
 
   React.useEffect(() => {
     // If screen share tracks are published, and no pin is set explicitly, auto set the screen share.
@@ -206,12 +217,9 @@ export function VideoConference({
       }
     }
   }, [
-    screenShareTracks
-      .map(
-        (ref) => `${ref.publication.trackSid}_${ref.publication.isSubscribed}`
-      )
-      .join(),
-    focusTrack?.publication?.trackSid,
+    screenShareTracksKey,
+    focusTrack,
+    layoutContext.pin,
     actualTracks,
   ]);
 
