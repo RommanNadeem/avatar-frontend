@@ -120,3 +120,40 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* LiveKit White Theme Override */
+[data-lk-theme="default"] {
+  --lk-bg: #ffffff;
+  --lk-bg-secondary: #f5f5f5;
+  --lk-bg-tertiary: #e5e5e5;
+  --lk-text: #1a1a1a;
+  --lk-text-secondary: #666666;
+  --lk-border: #e0e0e0;
+  --lk-accent: #4a9eff;
+  --lk-accent-alpha: rgba(74, 158, 255, 0.1);
+}
+
+html {
+  background-color: #ffffff;
+  color-scheme: light;
+}
+
+body {
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
+/* ConnectionStateToast - black text for connecting/disconnecting messages */
+.lk-connection-state-toast,
+[data-lk-theme="default"] .lk-connection-state-toast,
+.lk-toast,
+[data-lk-theme="default"] .lk-toast {
+  color: #1a1a1a !important;
+}
+
+.lk-connection-state-toast *,
+[data-lk-theme="default"] .lk-connection-state-toast *,
+.lk-toast *,
+[data-lk-theme="default"] .lk-toast * {
+  color: #1a1a1a !important;
+}

@@ -12,19 +12,22 @@ export interface Persona {
 
 const PERSONAS: Persona[] = [
   {
-    id: "2fbdec6f-86fd-47d6-8bcc-e8a69270e75b",
-    name: "Pablo",
-    description: "Friendly and professional",
+    id: "6cc28442-cccd-42a8-b6e4-24b7210a09c5",
+    name: "Shehzad",
+    image: "/images/Shehzad.png",
+    description: "Medical Affair Trainer",
   },
   {
-    id: "30fa96d0-26c4-4e55-94a0-517025942e18",
-    name: "Cara",
-    description: "Warm and approachable",
+    id: "edf6fdcb-acab-44b8-b974-ded72665ee26",
+    name: "Amna",
+    image: "/images/Amna.png",
+    description: "HR Trainer",
   },
   {
-    id: "aa5d6abd-416f-4dd4-a123-b5b29bf1644a",
-    name: "Leo",
-    description: "Energetic and engaging",
+    id: "8a339c9f-0666-46bd-ab27-e90acd0409dc",
+    name: "Ahmad",
+    image: "/images/Ahmad.png",
+    description: "Marketing Trainer",
   },
 ];
 
@@ -36,10 +39,9 @@ interface PersonaSelectionProps {
 export function PersonaSelection({ onSelect, onSkip }: PersonaSelectionProps) {
   const [selectedPersona, setSelectedPersona] = React.useState<Persona | null>(null);
 
-  const handleContinue = () => {
-    if (selectedPersona) {
-      onSelect(selectedPersona);
-    }
+  const handlePersonaClick = (persona: Persona) => {
+    setSelectedPersona(persona);
+    onSelect(persona);
   };
 
   return (
@@ -50,8 +52,8 @@ export function PersonaSelection({ onSelect, onSkip }: PersonaSelectionProps) {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        background: "var(--lk-bg, #1a1a1a)",
-        color: "var(--lk-text, #ffffff)",
+        background: "var(--lk-bg, #ffffff)",
+        color: "var(--lk-text, #1a1a1a)",
         padding: "2rem",
       }}
     >
@@ -86,19 +88,19 @@ export function PersonaSelection({ onSelect, onSkip }: PersonaSelectionProps) {
           {PERSONAS.map((persona) => (
             <div
               key={persona.id}
-              onClick={() => setSelectedPersona(persona)}
+              onClick={() => handlePersonaClick(persona)}
               style={{
                 padding: "1.5rem",
                 borderRadius: "12px",
                 border: `2px solid ${
                   selectedPersona?.id === persona.id
                     ? "var(--lk-accent, #4a9eff)"
-                    : "var(--lk-border, #333)"
+                    : "var(--lk-border, #e0e0e0)"
                 }`,
-                backgroundColor:
+                    backgroundColor:
                   selectedPersona?.id === persona.id
                     ? "var(--lk-accent-alpha, rgba(74, 158, 255, 0.1))"
-                    : "var(--lk-bg-secondary, #252525)",
+                    : "var(--lk-bg-secondary, #f5f5f5)",
                 cursor: "pointer",
                 transition: "all 0.2s",
                 transform:
@@ -112,28 +114,53 @@ export function PersonaSelection({ onSelect, onSkip }: PersonaSelectionProps) {
               }}
               onMouseLeave={(e) => {
                 if (selectedPersona?.id !== persona.id) {
-                  e.currentTarget.style.borderColor = "var(--lk-border, #333)";
+                  e.currentTarget.style.borderColor = "var(--lk-border, #e0e0e0)";
                   e.currentTarget.style.opacity = "1";
                 }
               }}
             >
-              <div
-                style={{
-                  width: "120px",
-                  height: "120px",
-                  margin: "0 auto 1rem",
-                  borderRadius: "50%",
-                  backgroundColor: "var(--lk-bg-tertiary, #333)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "3rem",
-                  fontWeight: "bold",
-                  color: "var(--lk-text, #fff)",
-                }}
-              >
-                {persona.name.charAt(0)}
-              </div>
+              {persona.image ? (
+                <div
+                  style={{
+                    width: "120px",
+                    height: "120px",
+                    margin: "0 auto 1rem",
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    position: "relative",
+                  }}
+                >
+                  <Image
+                    src={persona.image}
+                    alt={persona.name}
+                    width={120}
+                    height={120}
+                    style={{
+                      objectFit: "cover",
+                      width: "100%",
+                      height: "100%",
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  style={{
+                    width: "120px",
+                    height: "120px",
+                    margin: "0 auto 1rem",
+                    borderRadius: "50%",
+                    backgroundColor: "var(--lk-bg-tertiary, #e5e5e5)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "3rem",
+                    fontWeight: "bold",
+                    color: "var(--lk-text, #1a1a1a)",
+                  }}
+                >
+                  {persona.name.charAt(0)}
+                </div>
+              )}
               <h3
                 style={{
                   fontSize: "1.25rem",
@@ -155,45 +182,6 @@ export function PersonaSelection({ onSelect, onSkip }: PersonaSelectionProps) {
               )}
             </div>
           ))}
-        </div>
-
-        <div style={{ display: "flex", gap: "1rem", justifyContent: "center" }}>
-          {onSkip && (
-            <button
-              onClick={onSkip}
-              style={{
-                padding: "0.75rem 2rem",
-                borderRadius: "8px",
-                border: "1px solid var(--lk-border, #333)",
-                backgroundColor: "transparent",
-                color: "var(--lk-text, #fff)",
-                cursor: "pointer",
-                fontSize: "1rem",
-                fontWeight: "500",
-              }}
-            >
-              Skip
-            </button>
-          )}
-          <button
-            onClick={handleContinue}
-            disabled={!selectedPersona}
-            style={{
-              padding: "0.75rem 2rem",
-              borderRadius: "8px",
-              border: "none",
-              backgroundColor: selectedPersona
-                ? "var(--lk-accent, #4a9eff)"
-                : "var(--lk-bg-tertiary, #333)",
-              color: "var(--lk-text, #fff)",
-              cursor: selectedPersona ? "pointer" : "not-allowed",
-              fontSize: "1rem",
-              fontWeight: "500",
-              opacity: selectedPersona ? 1 : 0.5,
-            }}
-          >
-            Continue
-          </button>
         </div>
       </div>
     </div>

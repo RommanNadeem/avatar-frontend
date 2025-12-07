@@ -30,6 +30,7 @@ import {
   useMaybeTrackRefContext,
 } from "@livekit/components-react";
 import Image from "next/image";
+import { usePersona } from "./PersonaContext";
 
 /**
  * The `ParticipantContextIfNeeded` component only creates a `ParticipantContext`
@@ -118,6 +119,7 @@ export const ParticipantTile: (
   ref
 ) {
   const trackReference = useEnsureTrackRef(trackRef);
+  const { selectedPersona } = usePersona();
 
   const { elementProps } = useParticipantTile<HTMLDivElement>({
     htmlProps,
@@ -159,7 +161,7 @@ export const ParticipantTile: (
   const isAvatarAgent =
     isAgent &&
     agentType === "avatar" &&
-    trackReference.participant.identity?.includes("avatar");
+    publishOnBehalf === "true";
 
   const isNotAvatarAgent =
     isAgent &&
@@ -194,11 +196,38 @@ export const ParticipantTile: (
               (trackReference.publication?.kind === "video" ||
                 trackReference.source === Track.Source.Camera ||
                 trackReference.source === Track.Source.ScreenShare) ? (
-                <VideoTrack
-                  trackRef={trackReference}
-                  onSubscriptionStatusChanged={handleSubscribe}
-                  manageSubscription={autoManageSubscription}
-                />
+                <>
+                  <VideoTrack
+                    trackRef={trackReference}
+                    onSubscriptionStatusChanged={handleSubscribe}
+                    manageSubscription={autoManageSubscription}
+                  />
+                  {/* Searle logo watermark on top right - only for agent videos */}
+                  {(isAvatarAgent || (isAgent && publishOnBehalf === "true" && agentType === "avatar")) && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "10px",
+                        right: "10px",
+                        zIndex: 10,
+                        width: "80px",
+                        height: "auto",
+                        opacity: 0.8,
+                      }}
+                    >
+                      <Image
+                        src="/images/Searle.svg"
+                        alt="Searle"
+                        width={80}
+                        height={80}
+                        style={{
+                          objectFit: "contain",
+                          filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))",
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
               ) : (
                 isTrackReference(trackReference) && (
                   <AudioTrack
@@ -248,7 +277,12 @@ export const ParticipantTile: (
                         }}
                         show={"muted"}
                       ></TrackMutedIndicator>
-                      <ParticipantName />
+                      {/* Show persona name for agent, otherwise show participant name */}
+                      {isAvatarAgent && selectedPersona ? (
+                        <span>{selectedPersona.name}</span>
+                      ) : (
+                        <ParticipantName />
+                      )}
                     </>
                   ) : (
                     <>

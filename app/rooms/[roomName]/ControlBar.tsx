@@ -142,7 +142,7 @@ export function ControlBar({
       {visibleControls.leave && (
         <DisconnectButton>
           {showIcon && <LeaveIcon />}
-          {showText && "Leave"}
+          {showText && "End Call"}
         </DisconnectButton>
       )}
       <StartMediaButton />

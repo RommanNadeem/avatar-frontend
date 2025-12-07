@@ -17,21 +17,21 @@ export default function Page() {
       <section className="max-w-xl text-center flex flex-col items-center justify-center h-screen">
         <Image
           className="mb-18"
-          src={process.env.NEXT_PUBLIC_HOST_IMAGE || "/images/garth.png"}
+          src="/images/Searle.svg"
           width={300}
           height={300}
-          alt="logo"
+          alt="Searle logo"
         />
         <div className="p-1">
-          <h1 className="text-3xl font-semibold md:text-4xl">
-            Video Calls With AI Agents
+          <h1 className="text-3xl font-semibold md:text-4xl" style={{ color: "#000000" }}>
+            AI Medical Representatives
           </h1>
-          <p className="text-xl mt-4">lets dev stuff</p>
+          <p className="text-xl mt-4" style={{ color: "#000000" }}>Welcome to the future</p>
         </div>
         <div className="flex flex-col">
           <div className="flex flex-col mt-8 gap-4 justify-center w-full md:flex-row md:w-auto">
             <button className="lk-button" onClick={startMeeting}>
-              New Meeting
+              Start
             </button>
           </div>
 
