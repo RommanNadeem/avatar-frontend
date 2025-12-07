@@ -29,6 +29,7 @@
     "sonner": "^2.0.3",
     "tailwind-merge": "^3.1.0",
     "tinykeys": "^3.0.0",
+    "tslib": "^2.6.2",
     "tw-animate-css": "^1.2.5"
   },
   "devDependencies": {
